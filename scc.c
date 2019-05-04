@@ -119,14 +119,22 @@ Node *term() {
   error("unexpected token: %s", tokens[pos].input);
 }
 
+Node *unary() {
+  if (consume('+'))
+    return term();
+  if (consume('-'))
+    return new_node('-', new_node_num(0), term());
+  return term();
+}
+
 Node *mul() {
-  Node *node = term();
+  Node *node = unary();
 
   for (;;) {
     if (consume('*'))
-      node = new_node('*', node, term());
+      node = new_node('*', node, unary());
     else if (consume('/'))
-      node = new_node('/', node, term());
+      node = new_node('/', node, unary());
     else
       return node;
   }
