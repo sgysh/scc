@@ -10,6 +10,8 @@
 
 enum {
   TK_NUM = 256, // Number literal
+  TK_EQ,
+  TK_NE,
   TK_EOF,       // End marker
 };
 
@@ -38,6 +40,22 @@ void tokenize(char *p) {
     // Skip whitespace
     if (isspace(*p)) {
       p++;
+      continue;
+    }
+
+    if (!strncmp(p, "==", 2)) {
+      tokens[i].ty = TK_EQ;
+      tokens[i].input = p;
+      i++;
+      p += 2;
+      continue;
+    }
+
+    if (!strncmp(p, "!=", 2)) {
+      tokens[i].ty = TK_NE;
+      tokens[i].input = p;
+      i++;
+      p += 2;
       continue;
     }
 
@@ -72,6 +90,8 @@ int pos = 0;
 
 enum {
   ND_NUM = 256,  // Number literal
+  ND_EQ,
+  ND_NE,
 };
 
 typedef struct Node {
@@ -81,7 +101,7 @@ typedef struct Node {
   int val;          // Number literal
 } Node;
 
-static Node *add();
+static Node *equality();
 
 int consume(int ty) {
   if (tokens[pos].ty != ty)
@@ -107,7 +127,7 @@ Node *new_node_num(int val) {
 
 Node *term() {
   if (consume('(')) {
-    Node *node = add();
+    Node *node = equality();
     if (!consume(')'))
       error(") expected");
     return node;
@@ -153,6 +173,19 @@ Node *add() {
   }
 }
 
+Node *equality() {
+  Node *node = add();
+
+  for (;;) {
+    if (consume(TK_EQ))
+      node = new_node(ND_EQ, node, add());
+    else if (consume(TK_NE))
+      node = new_node(ND_NE, node, add());
+    else
+      return node;
+  }
+}
+
 void gen(Node *node) {
   if (node->ty == ND_NUM) {
     printf("  push %d\n", node->val);
@@ -178,6 +211,16 @@ void gen(Node *node) {
     case '/':
       printf("  mov rdx, 0\n");
       printf("  div rdi\n");
+      break;
+    case ND_EQ:
+      printf("  cmp rax, rdi\n");
+      printf("  sete al\n");
+      printf("  movzb rax, al\n");
+      break;
+    case ND_NE:
+      printf("  cmp rax, rdi\n");
+      printf("  setne al\n");
+      printf("  movzb rax, al\n");
   }
 
   printf("  push rax\n");
@@ -190,7 +233,7 @@ int main(int argc, char **argv) {
   }
 
   tokenize(argv[1]);
-  Node *node = add();
+  Node *node = equality();
 
   // Print the prologue
   printf(".intel_syntax noprefix\n");
