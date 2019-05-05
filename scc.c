@@ -12,6 +12,8 @@ enum {
   TK_NUM = 256, // Number literal
   TK_EQ,
   TK_NE,
+  TK_LE,
+  TK_GE,
   TK_EOF,       // End marker
 };
 
@@ -40,6 +42,22 @@ void tokenize(char *p) {
     // Skip whitespace
     if (isspace(*p)) {
       p++;
+      continue;
+    }
+
+    if (!strncmp(p, "<=", 2)) {
+      tokens[i].ty = TK_LE;
+      tokens[i].input = p;
+      i++;
+      p += 2;
+      continue;
+    }
+
+    if (!strncmp(p, ">=", 2)) {
+      tokens[i].ty = TK_GE;
+      tokens[i].input = p;
+      i++;
+      p += 2;
       continue;
     }
 
@@ -92,6 +110,7 @@ enum {
   ND_NUM = 256,  // Number literal
   ND_EQ,
   ND_NE,
+  ND_LE,
 };
 
 typedef struct Node {
@@ -173,14 +192,27 @@ Node *add() {
   }
 }
 
-Node *equality() {
+Node *rel() {
   Node *node = add();
 
   for (;;) {
+    if (consume(TK_LE))
+      node = new_node(ND_LE, node, add());
+    else if (consume(TK_GE))
+      node = new_node(ND_LE, add(), node);
+    else
+      return node;
+  }
+}
+
+Node *equality() {
+  Node *node = rel();
+
+  for (;;) {
     if (consume(TK_EQ))
-      node = new_node(ND_EQ, node, add());
+      node = new_node(ND_EQ, node, rel());
     else if (consume(TK_NE))
-      node = new_node(ND_NE, node, add());
+      node = new_node(ND_NE, node, rel());
     else
       return node;
   }
@@ -220,6 +252,11 @@ void gen(Node *node) {
     case ND_NE:
       printf("  cmp rax, rdi\n");
       printf("  setne al\n");
+      printf("  movzb rax, al\n");
+      break;
+    case ND_LE:
+      printf("  cmp rax, rdi\n");
+      printf("  setle al\n");
       printf("  movzb rax, al\n");
   }
 
