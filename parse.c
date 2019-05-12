@@ -1,7 +1,9 @@
 #include "scc.h"
 
 static Vector *tokens;
-Node *equality();
+Node *code[100];
+
+Node *assign();
 
 Token *add_token(Vector *v, int ty, char *input) {
   Token *t = malloc(sizeof(Token));
@@ -49,7 +51,7 @@ Vector *tokenize(char *p) {
       continue;
     }
 
-    if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>') {
+    if (strchr("+-*/()<>;=", *p)) {
       add_token(v, *p, p);
       i++;
       p++;
@@ -61,6 +63,13 @@ Vector *tokenize(char *p) {
       Token *t = add_token(v, TK_NUM, p);
       t->val = strtol(p, &p, 10);
       i++;
+      continue;
+    }
+
+    if ('a' <= *p && *p <= 'z') {
+      add_token(v, TK_IDENT, p);
+      i++;
+      p++;
       continue;
     }
 
@@ -100,18 +109,26 @@ Node *new_node_num(int val) {
 Node *term() {
   Token *t = tokens->data[pos];
   if (consume('(')) {
-    Node *node = equality();
+    Node *node = assign();
     if (!consume(')'))
       error(") expected");
     return node;
   }
 
-  if (t->ty != TK_NUM)
-    error("unexpected token: %s", t->input);
+  if (t->ty == TK_NUM) {
+    pos++;
+    return new_node_num(t->val);
+  }
 
-  pos++;
-  return new_node_num(t->val);
+  if (t->ty == TK_IDENT) {
+    Node *node = malloc(sizeof(Node));
+    node->ty = ND_IDENT;
+    node->name = *t->input;
+    pos++;
+    return node;
+  }
 
+  error("unexpected token: %s", t->input);
 }
 
 Node *unary() {
@@ -178,7 +195,28 @@ Node *equality() {
   }
 }
 
-Node *parse(Vector *v) {
+Node *assign() {
+  Node *node = equality();
+  if (consume('='))
+    node = new_node('=', node, assign());
+  return node;
+}
+
+Node *stmt() {
+  Node *node = assign();
+  if (!consume(';'))
+    error("; expected");
+  return node;
+}
+
+void program() {
+  int i = 0;
+  while (((Token *)tokens->data[pos])->ty != TK_EOF)
+    code[i++] = stmt();
+  code[i] = NULL;
+}
+
+void parse(Vector *v) {
   tokens = v;
-  return equality();
+  program();;
 }
