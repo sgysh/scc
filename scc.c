@@ -69,9 +69,6 @@ typedef struct {
   char *input; // Token string (for error reporting)
 } Token;
 
-// Tokenized input is stored to this array.
-Token tokens[100];
-
 // An error reporting function.
 void error(char *fmt, ...) {
   va_list ap;
@@ -81,7 +78,18 @@ void error(char *fmt, ...) {
   exit(1);
 }
 
-void tokenize(char *p) {
+Token *add_token(Vector *v, int ty, char *input) {
+  Token *t = malloc(sizeof(Token));
+  t->ty = ty;
+  t->input = input;
+  vec_push(v, t);
+  return t;
+}
+
+Vector *tokens;
+
+Vector *tokenize(char *p) {
+  Vector *v = new_vector();
   int i = 0;
   while (*p) {
     // Skip whitespace
@@ -91,40 +99,35 @@ void tokenize(char *p) {
     }
 
     if (!strncmp(p, "<=", 2)) {
-      tokens[i].ty = TK_LE;
-      tokens[i].input = p;
+      add_token(v, TK_LE, p);
       i++;
       p += 2;
       continue;
     }
 
     if (!strncmp(p, ">=", 2)) {
-      tokens[i].ty = TK_GE;
-      tokens[i].input = p;
+      add_token(v, TK_GE, p);
       i++;
       p += 2;
       continue;
     }
 
     if (!strncmp(p, "==", 2)) {
-      tokens[i].ty = TK_EQ;
-      tokens[i].input = p;
+      add_token(v, TK_EQ, p);
       i++;
       p += 2;
       continue;
     }
 
     if (!strncmp(p, "!=", 2)) {
-      tokens[i].ty = TK_NE;
-      tokens[i].input = p;
+      add_token(v, TK_NE, p);
       i++;
       p += 2;
       continue;
     }
 
     if (*p == '+' || *p == '-' || *p == '*' || *p == '/' || *p == '(' || *p == ')' || *p == '<' || *p == '>') {
-      tokens[i].ty = *p;
-      tokens[i].input = p;
+      add_token(v, *p, p);
       i++;
       p++;
       continue;
@@ -132,9 +135,8 @@ void tokenize(char *p) {
 
     // Number
     if (isdigit(*p)) {
-      tokens[i].ty = TK_NUM;
-      tokens[i].input = p;
-      tokens[i].val = strtol(p, &p, 10);
+      Token *t = add_token(v, TK_NUM, p);
+      t->val = strtol(p, &p, 10);
       i++;
       continue;
     }
@@ -143,8 +145,8 @@ void tokenize(char *p) {
     exit(1);
   }
 
-  tokens[i].ty = TK_EOF;
-  tokens[i].input = p;
+  add_token(v, TK_EOF, p);
+  return v;
 }
 
 // Recursive-descendent parser
@@ -168,7 +170,8 @@ typedef struct Node {
 static Node *equality();
 
 int consume(int ty) {
-  if (tokens[pos].ty != ty)
+  Token *t = tokens->data[pos];
+  if (t->ty != ty)
     return 0;
   pos++;
   return 1;
@@ -190,6 +193,7 @@ Node *new_node_num(int val) {
 }
 
 Node *term() {
+  Token *t = tokens->data[pos];
   if (consume('(')) {
     Node *node = equality();
     if (!consume(')'))
@@ -197,10 +201,12 @@ Node *term() {
     return node;
   }
 
-  if (tokens[pos].ty == TK_NUM)
-    return new_node_num(tokens[pos++].val);
+  if (t->ty != TK_NUM)
+    error("unexpected token: %s", t->input);
 
-  error("unexpected token: %s", tokens[pos].input);
+  pos++;
+  return new_node_num(t->val);
+
 }
 
 Node *unary() {
@@ -328,7 +334,7 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  tokenize(argv[1]);
+  tokens = tokenize(argv[1]);
   Node *node = equality();
 
   // Print the prologue
