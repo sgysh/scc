@@ -19,6 +19,7 @@ enum {
   TK_NE,
   TK_LE,
   TK_GE,
+  TK_RETURN,
   TK_EOF,       // End marker
 };
 
@@ -34,6 +35,7 @@ enum {
   ND_IDENT,
   ND_EQ,
   ND_NE,
+  ND_RETURN,
   ND_LE,
 };
 
