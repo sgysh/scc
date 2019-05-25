@@ -12,6 +12,11 @@ typedef struct {
   int len;
 } Vector;
 
+typedef struct {
+  Vector *keys;
+  Vector *vals;
+} Map;
+
 enum {
   TK_NUM = 256, // Number literal
   TK_IDENT,
