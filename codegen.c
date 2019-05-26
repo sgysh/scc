@@ -1,18 +1,26 @@
 #include "scc.h"
 
+static Map *vars;
+static int bpoff;
+
 void gen_lval(Node *node) {
   if (node->ty != ND_IDENT)
     error("unexpected node");
 
-  int offset = ('z' - node->name + 1) * 8;
+  int offset = (long)map_get(vars, node->name);
+  if (!offset) {
+    bpoff += 8;
+    offset = bpoff;
+    map_put(vars, node->name, (void *)(long)bpoff);
+  }
   printf("  mov rax, rbp\n");
   printf("  sub rax, %d\n", offset);
   printf("  push rax\n");
 }
 
-void gen(Node *node) {
+void gen_stmt(Node *node) {
   if (node->ty == ND_RETURN) {
-    gen(node->lhs);
+    gen_stmt(node->lhs);
     printf("  pop rax\n");
     printf("  mov rsp, rbp\n");
     printf("  pop rbp\n");
@@ -35,7 +43,7 @@ void gen(Node *node) {
 
   if (node->ty == '=') {
     gen_lval(node->lhs);
-    gen(node->rhs);
+    gen_stmt(node->rhs);
 
     printf("  pop rdi\n");
     printf("  pop rax\n");
@@ -44,8 +52,8 @@ void gen(Node *node) {
     return;
   }
 
-  gen(node->lhs);
-  gen(node->rhs);
+  gen_stmt(node->lhs);
+  gen_stmt(node->rhs);
 
   printf("  pop rdi\n");
   printf("  pop rax\n");
@@ -86,4 +94,13 @@ void gen(Node *node) {
   }
 
   printf("  push rax\n");
+}
+
+void gen() {
+  vars = new_map();
+  bpoff = 0;
+  for (int i = 0; code[i]; i++) {
+    gen_stmt(code[i]);
+    printf("  pop rax\n");
+  }
 }

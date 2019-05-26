@@ -21,12 +21,9 @@ int main(int argc, char **argv) {
 
   printf("  push rbp\n");
   printf("  mov rbp, rsp\n");
-  printf("  sub rsp, 208\n");
+  printf("  sub rsp, 208\n");  // FIXME
 
-  for (int i = 0; code[i]; i++) {
-    gen(code[i]);
-    printf("  pop rax\n");
-  }
+  gen();
 
   printf("  mov rsp, rbp\n");
   printf("  pop rbp\n");

@@ -43,5 +43,7 @@ try 2 'a=2;return a;'
 try 10 'a=2;b=3+2;return a*b;'
 try 4 'a=b=2;return a*b;'
 try 5 'return 5; return 8;'
+try 6 'foo = 1; bar = 2 + 3; return foo + bar;'
+try 5 '_n_0 = 1; _n_1 = 2 + 3; return _n_0 * _n_1;'
 
 echo OK

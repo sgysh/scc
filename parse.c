@@ -14,10 +14,7 @@ Token *add_token(Vector *v, int ty, char *input) {
 }
 
 int is_alnum(char c) {
-  return ('a' <= c && c <= 'z') ||
-         ('A' <= c && c <= 'Z') ||
-         ('0' <= c && c <= '9') ||
-         (c == '_');
+  return isalnum(c) || (c == '_');
 }
 
 Vector *tokenize(char *p) {
@@ -80,10 +77,16 @@ Vector *tokenize(char *p) {
       continue;
     }
 
-    if ('a' <= *p && *p <= 'z') {
-      add_token(v, TK_IDENT, p);
+    if (isalpha(*p) || *p == '_') {
+      int len = 1;
+      while (is_alnum(p[len]))
+        len++;
+
+      char *name = strndup(p, len);
+      Token *t = add_token(v, TK_IDENT, p);
+      t->name = name;
       i++;
-      p++;
+      p += len;
       continue;
     }
 
@@ -137,7 +140,7 @@ Node *term() {
   if (t->ty == TK_IDENT) {
     Node *node = malloc(sizeof(Node));
     node->ty = ND_IDENT;
-    node->name = *t->input;
+    node->name = t->name;
     pos++;
     return node;
   }

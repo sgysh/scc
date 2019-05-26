@@ -32,6 +32,7 @@ enum {
 typedef struct {
   int ty;      // Token type
   int val;     // Number literal
+  char *name;
   char *input; // Token string (for error reporting)
 } Token;
 
@@ -49,15 +50,18 @@ typedef struct Node {
   struct Node *lhs; // left-hand side
   struct Node *rhs; // right-hand side
   int val;          // Number literal
-  char name;
+  char *name;
 } Node;
 
 extern Node *code[];
 
 Vector *new_vector();
 void vec_push(Vector *vec, void *elem);
+Map *new_map();
+void map_put(Map *map, char *key, void *val);
+void *map_get(Map *map, char *key);
 void error(char *fmt, ...);
 void parse(Vector *v);
-void gen(Node *node);
+void gen();
 void runtest();
 Vector *tokenize(char *p);
